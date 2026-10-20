@@ -1,0 +1,21 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json",
+  "name": "io.github.amrzas/bama-mcp",
+  "description": "Search bama.ir car ads by brand, model, city and price; read ad details. Read-only.",
+  "version": "0.1.0",
+  "repository": {
+    "url": "https://github.com/Amrzas/bama-mcp",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "bama-mcp",
+      "version": "0.1.0",
+      "runtimeHint": "uvx",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}
