@@ -24,7 +24,12 @@ jobs:
       - name: GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release create "$GITHUB_REF_NAME" --generate-notes
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" dist/*.whl dist/*.tar.gz --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" --generate-notes dist/*.whl dist/*.tar.gz
+          fi
       - name: Install mcp-publisher
         run: |
           curl -sL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
