@@ -8,8 +8,8 @@ An unofficial, read-only MCP server for [bama.ir](https://bama.ir), Iran's bigge
 search ads by brand, model, city and price, read full ad details, compare prices in Toman, and browse
 every brand, model and city — all from Claude, Cursor or Copilot.
 
-[![PyPI](https://img.shields.io/pypi/v/bama-mcp?color=2563eb)](https://pypi.org/project/bama-mcp/)
-[![Python](https://img.shields.io/pypi/pyversions/bama-mcp)](https://pypi.org/project/bama-mcp/)
+[![PyPI](https://img.shields.io/pypi/v/bama-mcp?label=pypi&color=2563eb)](https://pypi.org/project/bama-mcp/)
+[![Python](https://img.shields.io/badge/python-3.10%2B-3776ab)](https://pypi.org/project/bama-mcp/)
 [![CI](https://github.com/Amrzas/bama-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/Amrzas/bama-mcp/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-16a34a)](https://github.com/Amrzas/bama-mcp/blob/main/LICENSE)
 
