@@ -1,4 +1,4 @@
-[![bama-mcp: unofficial MCP server for bama.ir car ads](.github/banner.jpg)](.github/banner.jpg)
+[![bama-mcp: unofficial MCP server for bama.ir car ads](https://raw.githubusercontent.com/Amrzas/bama-mcp/main/.github/banner.jpg)](https://raw.githubusercontent.com/Amrzas/bama-mcp/main/.github/banner.jpg)
 
 # bama-mcp: bama.ir MCP server for AI agents
 
@@ -55,7 +55,7 @@ Settings → Developer → Edit Config, then add:
 
 Add the same JSON block to `~/.cursor/mcp.json` (or `.cursor/mcp.json` inside a project), or click the button below:
 
-[![Install in Cursor](.github/cursor-install-dark.svg)](https://cursor.com/en/install-mcp?name=bama&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyJiYW1hLW1jcCJdfQ%3D%3D)
+[![Install in Cursor](https://raw.githubusercontent.com/Amrzas/bama-mcp/main/.github/cursor-install-dark.svg)](https://cursor.com/en/install-mcp?name=bama&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyJiYW1hLW1jcCJdfQ%3D%3D)
 
 In the terminal:
 
