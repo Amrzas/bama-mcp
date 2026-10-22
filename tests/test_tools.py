@@ -201,7 +201,7 @@ def test_search_cars_limit_stops_fetching(api):
         return httpx.Response(200, json=pages[idx])
 
     api["/cad/api/search"] = responder
-    result = server.search_cars(vehicle="peugeot,206ir", sort=4, limit=5, page_size=3)
+    result = server.search_cars(vehicle="peugeot,206ir", sort=4, limit=5)
     # limit is respected up to page granularity: 2 pages of 3 ads = 6 items
     assert len(result["items"]) == 6
     assert result["truncated"] is True

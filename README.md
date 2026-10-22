@@ -117,7 +117,7 @@ Then just ask:
 - **`حواله` ads are dropped by default** (`include_havaleh=false`): their price is a down-payment slip, not the car. Pass `include_havaleh=true` to keep them.
 - **City names match Farsi or English** (`تهران`, `مشهد`, `tehran`). A province name returns the whole province (تهران includes ورامین and پاکدشت).
 - **bama.ir blocks foreign IPs.** Run it from an Iranian IP with the VPN off; otherwise the TLS handshake is dropped and the tool answers a clear `bama_timeout` error. `BAMA_MCP_PROXY` sets an HTTP proxy that exits in Iran.
-- **`page_size` max is 30** — bama's API rejects larger pages.
+- **Every bama page holds 30 ads** — the API ignores smaller `pageSize` values, so one call returns up to 30 items and `page` moves in 30-ad steps.
 - **Token-friendly by default.** One call returns at most `limit` items (default 30, cap 30 per call) with a compact field set (~12 fields incl. `summary_fa`, `price_fa`, `url`). Narrow it to `fields=title,price_fa,url`, widen to `fields=*`. Walk pages with `page = page + pages_fetched` whenever `truncated` is `true`. With `sort=4` (cheapest) plus `price_max` — or `sort=3` plus `price_min` — fetching stops as soon as the sorted list passes the bound, so bounded results are usually complete in one call.
 
 ## FAQ

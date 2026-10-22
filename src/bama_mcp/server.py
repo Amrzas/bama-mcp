@@ -16,6 +16,8 @@ from bama_mcp.format import ad_to_item, is_havaleh, parse_price_toman
 
 mcp = FastMCP("bama")
 
+PAGE_SIZE = 30  # bama ignores pageSize: every page holds 30 ads
+
 
 ALL_FIELDS = [
     "code", "title", "subtitle", "summary_fa", "brand", "brand_fa", "year", "mileage",
@@ -33,7 +35,6 @@ def search_cars(
     vehicle: str = "",
     sort: int = 0,
     page: int = 0,
-    page_size: int = 12,
     price_min: int = 0,
     price_max: int = 0,
     include_havaleh: bool = False,
@@ -46,7 +47,7 @@ def search_cars(
 
     vehicle: brand/model filter, e.g. 'peugeot' or 'peugeot,207' (from list_brands/list_models).
     sort: 0=default, 2=newest-update, 3=most expensive, 4=cheapest, 5=newest year, 6=oldest year, 7=lowest mileage.
-    page: zero-based page index to start from. page_size: 1-30 (bama API rejects larger).
+    page: zero-based page index to start from. Each bama page always holds 30 ads.
     max_pages: pages fetched per call, 1-20 (default 10). Fetching stops as soon as 'limit'
       items are collected, when results end, or when a sort=4 search passes price_max
       (sort=3 passes price_min) — those price-bounded results are usually complete in one call.
@@ -65,10 +66,8 @@ def search_cars(
     summary_fa is a ready Persian one-liner for tables; price_fa ('۴۱۰ میلیون تومان').
     Priceless/negotiable ads sink to the bottom when sorting by price.
     """
-    page_size = max(1, min(page_size, 30))
     max_pages = max(1, min(max_pages, 20))
     limit = max(1, min(limit, 30))
-    page_size = min(page_size, limit)  # never fetch more ads per page than we will return
 
     requested = [f.strip() for f in (fields or "").split(",") if f.strip()]
     if requested and requested[0] in ("*", "all"):
@@ -103,7 +102,7 @@ def search_cars(
     limit_hit = False
     try:
         for p in range(page, page + max_pages):
-            query = "&".join(base + [f"pageIndex={p}", f"pageSize={page_size}"])
+            query = "&".join(base + [f"pageIndex={p}", f"pageSize={PAGE_SIZE}"])
             data = http.get(f"/cad/api/search?{query}").json()
             pages_fetched += 1
             meta = data.get("metadata", {}) or {}

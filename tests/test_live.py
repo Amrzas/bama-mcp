@@ -16,7 +16,7 @@ def real_network():
 
 
 def test_search_returns_items():
-    result = server.search_cars(vehicle="peugeot", page_size=5)
+    result = server.search_cars(vehicle="peugeot")
     assert "error" not in result, result
     assert result["items"]
     first = result["items"][0]
@@ -36,14 +36,14 @@ def test_list_models_peugeot():
 
 def test_city_filter_restricts_results():
     # 'تهران' matches the whole province (includes ورامین etc.); use a unique city name.
-    result = server.search_cars(vehicle="peugeot", city="تبریز", page_size=10)
+    result = server.search_cars(vehicle="peugeot", city="تبریز")
     assert "error" not in result, result
     assert result["items"]
     assert all((i["location"] or "").startswith("تبریز") for i in result["items"])
 
 
 def test_car_details_end_to_end():
-    search = server.search_cars(vehicle="peugeot", page_size=1)
+    search = server.search_cars(vehicle="peugeot")
     url = search["items"][0]["url"]
     details = server.car_details(url)
     assert "error" not in details, details
