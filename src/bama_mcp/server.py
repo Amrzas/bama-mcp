@@ -12,9 +12,20 @@ from fastmcp import FastMCP
 
 from bama_mcp import http
 from bama_mcp.catalog import brands, cities, models, reset_caches, resolve_city
-from bama_mcp.format import ad_to_item, dedupe, is_havaleh, parse_price_toman
+from bama_mcp.format import ad_to_item, is_havaleh, parse_price_toman
 
 mcp = FastMCP("bama")
+
+
+ALL_FIELDS = [
+    "code", "title", "subtitle", "summary_fa", "brand", "brand_fa", "year", "mileage",
+    "location", "time", "body_status", "transmission", "fuel", "color", "price_type",
+    "price_toman", "price_fa", "dealer", "seller_type", "image", "url",
+]
+DEFAULT_FIELDS = [
+    "code", "title", "summary_fa", "price_toman", "price_fa", "location", "year",
+    "mileage", "transmission", "fuel", "seller_type", "url",
+]
 
 
 @mcp.tool
@@ -28,26 +39,50 @@ def search_cars(
     include_havaleh: bool = False,
     city: str = "",
     max_pages: int = 10,
+    limit: int = 30,
+    fields: str = "",
 ) -> dict[str, Any]:
-    """Search car ads on bama.ir.
+    """Search car ads on bama.ir. Returns ready-to-link items — every item has 'url'.
 
     vehicle: brand/model filter, e.g. 'peugeot' or 'peugeot,207' (from list_brands/list_models).
     sort: 0=default, 2=newest-update, 3=most expensive, 4=cheapest, 5=newest year, 6=oldest year, 7=lowest mileage.
     page: zero-based page index to start from. page_size: 1-30 (bama API rejects larger).
-    max_pages: pages fetched per call, 1-20 (default 10 = up to 300 ads). Fetching stops
-      early when a sort=4 search passes price_max (or a sort=3 search passes price_min),
-      so price-bounded results are usually complete in one call. If 'truncated' is true,
-      more pages exist — call again with page = page + pages_fetched.
+    max_pages: pages fetched per call, 1-20 (default 10). Fetching stops as soon as 'limit'
+      items are collected, when results end, or when a sort=4 search passes price_max
+      (sort=3 passes price_min) — those price-bounded results are usually complete in one call.
+    limit: max items returned, 1-30 (default 30; may exceed by at most one page). If
+      'truncated' is true, call again with page = page + pages_fetched to get the next chunk.
+    fields: comma-separated list to control the output and token cost.
+      Default (compact, ~12 fields): code, title, summary_fa, price_toman, price_fa,
+      location, year, mileage, transmission, fuel, seller_type, url.
+      'fields=title,url' for the leanest output; 'fields=*' for all 21 fields.
+      'code' and 'url' are always included.
     price_min/price_max: filter by price in Toman (0 = no limit). Applied client-side.
     include_havaleh: False (default) drops 'حواله' (installment-slip) ads whose
       price is a down-payment, not the car price. True keeps them.
     city: city name in Persian or English (e.g. 'تهران', 'مشهد', 'tehran').
       Whole state if only state matches. Use list_cities for all names.
-    Each item has summary_fa (ready Persian one-liner) and price_fa ('۴۱۰ میلیون تومان').
+    summary_fa is a ready Persian one-liner for tables; price_fa ('۴۱۰ میلیون تومان').
     Priceless/negotiable ads sink to the bottom when sorting by price.
     """
     page_size = max(1, min(page_size, 30))
     max_pages = max(1, min(max_pages, 20))
+    limit = max(1, min(limit, 30))
+    page_size = min(page_size, limit)  # never fetch more ads per page than we will return
+
+    requested = [f.strip() for f in (fields or "").split(",") if f.strip()]
+    if requested and requested[0] in ("*", "all"):
+        requested = list(ALL_FIELDS)
+    unknown = [f for f in requested if f not in ALL_FIELDS]
+    if unknown:
+        return {
+            "error": "unknown_field",
+            "unknown_fields": unknown,
+            "available_fields": ALL_FIELDS,
+        }
+    keep = set(requested) if requested else set(DEFAULT_FIELDS)
+    keep |= {"code", "url"}  # the ad link is never dropped
+
     base = []
     if vehicle:
         base.append(f"vehicle={quote(vehicle, safe='')}")
@@ -59,11 +94,13 @@ def search_cars(
     if sort:
         base.append(f"sort={sort}")
 
-    all_items: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    items: list[dict[str, Any]] = []
     meta: dict[str, Any] = {}
     pages_fetched = 0
     stopped_early = False
     reached_end = False
+    limit_hit = False
     try:
         for p in range(page, page + max_pages):
             query = "&".join(base + [f"pageIndex={p}", f"pageSize={page_size}"])
@@ -75,22 +112,39 @@ def search_cars(
                 reached_end = True
                 break
             page_items = [ad_to_item(a) for a in ads]
-            all_items.extend(page_items)
             # ascending sort (4) passed the cap, or descending (3) passed the floor:
             # everything after this page is outside the bound anyway.
+            bound_passed = False
             if sort == 4 and price_max and any(
                 i["price_toman"] and i["price_toman"] > price_max for i in page_items
             ):
-                stopped_early = True
-                break
+                bound_passed = True
             if sort == 3 and price_min and any(
                 i["price_toman"] and i["price_toman"] < price_min for i in page_items
             ):
+                bound_passed = True
+            for it in page_items:
+                key = it.get("code") or it.get("url")
+                if key and key in seen:
+                    continue
+                if not include_havaleh and is_havaleh(it):
+                    continue
+                if price_max and (not it["price_toman"] or it["price_toman"] > price_max):
+                    continue
+                if price_min and (not it["price_toman"] or it["price_toman"] < price_min):
+                    continue
+                if key:
+                    seen.add(key)
+                items.append(it)
+            if bound_passed:
                 stopped_early = True
                 break
             total_pages = meta.get("total_pages")
             if total_pages is not None and p + 1 >= total_pages:
                 reached_end = True
+                break
+            if len(items) >= limit:
+                limit_hit = True
                 break
     except httpx.TimeoutException:
         return {
@@ -100,29 +154,24 @@ def search_cars(
     except httpx.HTTPError as e:
         return {"error": "bama_request_failed", "hint": str(e)[:200]}
 
-    items = dedupe(all_items)
-    if not include_havaleh:
-        items = [i for i in items if not is_havaleh(i)]
-    if price_min:
-        items = [i for i in items if i["price_toman"] and i["price_toman"] >= price_min]
-    if price_max:
-        items = [i for i in items if i["price_toman"] and i["price_toman"] <= price_max]
     if sort in (3, 4):
         items.sort(
             key=lambda i: (i["price_toman"] is None, i["price_toman"] or 0),
             reverse=(sort == 3),
         )
+    if keep != set(ALL_FIELDS):
+        items = [{k: i.get(k) for k in ALL_FIELDS if k in keep} for i in items]
     total_pages = meta.get("total_pages")
     truncated = (
         not (stopped_early or reached_end)
-        and total_pages is not None
-        and page + pages_fetched < total_pages
+        and (limit_hit or (total_pages is not None and page + pages_fetched < total_pages))
     )
     return {
         "total_count": meta.get("total_count"),
         "total_pages": total_pages,
         "page": page,
         "pages_fetched": pages_fetched,
+        "limit": limit,
         "truncated": truncated,
         "items": items,
     }

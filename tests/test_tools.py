@@ -155,6 +155,58 @@ def test_search_cars_truncated_when_max_pages_hit(api):
     assert result["page"] + result["pages_fetched"] == 2
 
 
+def test_search_cars_url_and_code_always_present(api):
+    """Even the leanest `fields` request keeps the ad link click-able."""
+    api["/cad/api/search"] = fixture("search_peugeot.json")
+    result = server.search_cars(vehicle="peugeot", fields="title")
+    assert all(set(i) == {"title", "code", "url"} for i in result["items"])
+    assert all(i["url"] and i["url"].startswith("https://bama.ir/") for i in result["items"])
+
+
+def test_search_cars_default_fields_are_compact(api):
+    api["/cad/api/search"] = fixture("search_peugeot.json")
+    result = server.search_cars(vehicle="peugeot")
+    item = result["items"][0]
+    assert {"code", "title", "summary_fa", "price_toman", "price_fa", "location", "year", "url"} <= set(item)
+    assert "dealer" not in item and "image" not in item and "subtitle" not in item
+
+
+def test_search_cars_unknown_field_lists_available(api):
+    api["/cad/api/search"] = fixture("search_peugeot.json")
+    result = server.search_cars(vehicle="peugeot", fields="title,nonsense")
+    assert result["error"] == "unknown_field"
+    assert "nonsense" in result["unknown_fields"]
+    assert "price_fa" in result["available_fields"]
+
+
+def test_search_cars_fields_star_returns_all(api):
+    api["/cad/api/search"] = fixture("search_peugeot.json")
+    result = server.search_cars(vehicle="peugeot", fields="*")
+    assert "dealer" in result["items"][0] and "subtitle" in result["items"][0]
+
+
+def test_search_cars_limit_stops_fetching(api):
+    """limit items collected => no further pages fetched."""
+    ads = [_ad(f"e{n}", 300_000_000 + n * 10_000_000) for n in range(10)]
+    pages = {
+        "0": _page(ads[:3], total_pages=5),
+        "1": _page(ads[3:6], total_pages=5),
+        "2": _page(ads[6:9], total_pages=5),
+    }
+
+    def responder(request):
+        idx = request.url.params["pageIndex"]
+        if idx not in pages:
+            raise AssertionError(f"page {idx} should not be fetched once limit is reached")
+        return httpx.Response(200, json=pages[idx])
+
+    api["/cad/api/search"] = responder
+    result = server.search_cars(vehicle="peugeot,206ir", sort=4, limit=5, page_size=3)
+    # limit is respected up to page granularity: 2 pages of 3 ads = 6 items
+    assert len(result["items"]) == 6
+    assert result["truncated"] is True
+
+
 def test_car_details_requires_full_url():
     result = server.car_details("pmsqbaqe")
     assert result["error"] == "code_only_not_supported_yet"

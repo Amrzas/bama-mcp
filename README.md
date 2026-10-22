@@ -87,10 +87,11 @@ It is a standard stdio MCP server: run `uvx bama-mcp`, or `pip install bama-mcp`
 
 Then just ask:
 
-- "پژو ۲۰۶ زیر ۱.۵ میلیارد تو تهران چی هست؟"
-- "ارزان‌ترین پژوهای باما رو جدول بکش"
-- "جزئیات این آگهی باما رو بده: https://bama.ir/car/detail-…"
-- "بین سمند و دنا کدوم ارزون‌تره؟"
+- "پژو ۲۰۶ زیر ۱.۵ میلیارد تو مشهد چی هست؟"
+- "۵ تا ۲۰۶SD ارزون تو تهران: سال، قیمت"
+- "جزئیات کامل این آگهی رو بده: https://bama.ir/car/detail-…"
+- "سمند LX مدل ۱۴۰۰ تو اهواز چنده؟"
+- "همه دنا پلاس رو با قیمت مرتب کن"
 
 ## What it can do
 
@@ -104,7 +105,7 @@ Then just ask:
 
 | Tool | What it does |
 |---|---|
-| `search_cars` | Ads by `vehicle` (brand/model), `city`, `price_min`/`price_max` (Toman), `sort`, pagination. One call fetches up to `max_pages` pages and returns the combined list |
+| `search_cars` | Ads by `vehicle` (brand/model), `city`, `price_min`/`price_max` (Toman), `sort`, pagination. One call returns up to `limit` items (default 30) with `url` always included; `fields` (e.g. `title,price_fa,url` or `*`) controls the output size |
 | `car_details` | One ad in full: price, year, colors, transmission, engine, seller description, photos |
 | `list_brands` | Every brand with Farsi names (`پژو` -> `peugeot`) |
 | `list_models` | Models of one brand (`peugeot` -> 206, 207, پارس, …) |
@@ -117,7 +118,7 @@ Then just ask:
 - **City names match Farsi or English** (`تهران`, `مشهد`, `tehran`). A province name returns the whole province (تهران includes ورامین and پاکدشت).
 - **bama.ir blocks foreign IPs.** Run it from an Iranian IP with the VPN off; otherwise the TLS handshake is dropped and the tool answers a clear `bama_timeout` error. `BAMA_MCP_PROXY` sets an HTTP proxy that exits in Iran.
 - **`page_size` max is 30** — bama's API rejects larger pages.
-- **One call is usually enough.** `search_cars` walks up to `max_pages` pages (default 10 = 300 ads, cap 20) and returns the combined, de-duplicated list, so the agent does not need to page by hand. With `sort=4` (cheapest) plus `price_max` — or `sort=3` plus `price_min` — it stops as soon as the sorted list passes the bound, which makes the bounded result complete rather than truncated. If `truncated` is `true`, continue with `page = page + pages_fetched`.
+- **Token-friendly by default.** One call returns at most `limit` items (default 30, cap 30 per call) with a compact field set (~12 fields incl. `summary_fa`, `price_fa`, `url`). Narrow it to `fields=title,price_fa,url`, widen to `fields=*`. Walk pages with `page = page + pages_fetched` whenever `truncated` is `true`. With `sort=4` (cheapest) plus `price_max` — or `sort=3` plus `price_min` — fetching stops as soon as the sorted list passes the bound, so bounded results are usually complete in one call.
 
 ## FAQ
 
@@ -147,7 +148,7 @@ claude mcp add bama -- uvx bama-mcp
 
 برای Claude Desktop، Cursor، VS Code و Hermes هم نمونه تنظیمات در بالای همین صفحه (بخش Quick start) آمده است.
 
-بعد بپرسید: «پژو ۲۰۶ زیر ۱.۵ میلیارد تو تهران چی هست؟»
+بعد بپرسید: «پژو ۲۰۶ زیر ۱.۵ میلیارد تو مشهد چی هست؟»
 
 **نکته:** سرور باید روی سیستمی با IP ایران و بدون VPN اجرا شود، چون باما درخواست‌های خارجی را در سطح TLS مسدود می‌کند.
 
